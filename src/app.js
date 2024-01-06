@@ -1,22 +1,34 @@
 const express = require('express')
-const cookieParser = require ('cookie-parser')
-const  {mongoose} = require('mongoose')
 const session = require('express-session')
-
-const PORT = 8080
+const FileStore = require('session-file-store')
+const MongoStore = require ('connect-mongo')
+const handlebars = require ('express-handlebars')
+const sessionRouter = require ('./routes/sessions')
+const viewRouter = require ('./routes/views')
+const mongoose = require('mongoose')
 
 const app = express()
+const PORT = 8080
 
 app.use(express.urlencoded({extend: true}))
-app.use(cookieParser());
+
+const FileStorage = FileStore(session)
 
 app.use(session({
+store: /*new FileStorage({ path: "./sessions", ttl:100, retries:0 }),*/
+ MongoStore.create({
+    mongoUrl:"mongodb+srv://mconsuelobeckett:BtMrTH620ttG7XsN@cluster1.kji7jjj.mongodb.net/?retryWrites=true&w=majority",
+mongoOptions:{ useNewUrlParser: true, useUnifiedTopology: true}, ttl: 15
+}), 
 secret:"secretConsuelo",
 resave: true,
-saveUninitialized: true
+saveUninitialized: true,
+cookie: {
+ maxAge: 15 * 60 *1000,
+},
 }))
 
-app.get("/session", (req, res)=>{
+/*app.get("/session", (req, res)=>{
 if( req.session.counter){
     req.session.counter++
     res.send(`you have visited the site ${req.session.counter} times.`)
@@ -25,6 +37,21 @@ else{
     req.session.counter =1
     res.send("welcome")
 }
+})*/
+
+app.engine("handlebars", handlebars.engine())
+app.set("views", __dirname + "views")
+app.set("view engine", "handlebars")
+
+
+app.use('api/sessions', sessionRouter)
+app.use('/', viewRouter)
+
+
+/*
+app.get('/check-session', (req, res) => {
+    console.log(req.session);
+    res.send('session data logged to console');
 })
 
 app.get("/logout", (req, res)=>{
@@ -62,7 +89,7 @@ app.get("/private", auth, (req,res)=>{
     
     res.send("SOS admin")
 })
-
+*/
 
 mongoose.connect("mongodb+srv://mconsuelobeckett:BtMrTH620ttG7XsN@cluster1.kji7jjj.mongodb.net/?retryWrites=true&w=majority")
 .then(() => {
@@ -73,13 +100,12 @@ mongoose.connect("mongodb+srv://mconsuelobeckett:BtMrTH620ttG7XsN@cluster1.kji7j
 }); 
 
 
-
 /*
-
 //rutas vista
 app.get("/", (req, res)=>{
-    res.sendFile(__dirname + "/index.html")
+    res.send("home")
 })
+
 
 app.post("/setCookie",(req, res)=>{
 const {user} = req.body
